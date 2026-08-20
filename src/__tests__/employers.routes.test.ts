@@ -138,7 +138,9 @@ describe("employer onboarding and verification routes", () => {
       });
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe("Employer with this Stellar address already exists.");
+    expect(res.body.error).toBe(
+      "Employer with this Stellar address already exists.",
+    );
   });
 
   it("returns 409 when employer with same email already exists", async () => {
@@ -189,6 +191,8 @@ describe("employer onboarding and verification routes", () => {
       });
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe("Employer with this organization name already exists.");
+    expect(res.body.error).toBe(
+      "Employer with this organization name already exists.",
+    );
   });
 });

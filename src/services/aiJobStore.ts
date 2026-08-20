@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 export type EnrichmentJobStatus =
-  | "pending"
-  | "succeeded"
-  | "failed"
-  | "timed_out";
+  "pending" | "succeeded" | "failed" | "timed_out";
 
 export interface EnrichmentJob {
   id: string;

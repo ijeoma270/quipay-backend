@@ -24,7 +24,11 @@ import {
   teardownTestDatabase,
   TestDatabase,
 } from "../helpers/testcontainer";
-import { getStreamById, softDeleteStream, upsertStream } from "../../db/queries";
+import {
+  getStreamById,
+  softDeleteStream,
+  upsertStream,
+} from "../../db/queries";
 
 // ── Test App Setup ────────────────────────────────────────────────────────────
 
@@ -484,7 +488,9 @@ describe("Stream Creation Integration Tests", () => {
 
       const streamResult = await testDb
         .getPool()
-        .query("SELECT * FROM payroll_streams WHERE stream_id = $1", [streamId]);
+        .query("SELECT * FROM payroll_streams WHERE stream_id = $1", [
+          streamId,
+        ]);
       expect(streamResult.rows).toHaveLength(0);
 
       const balanceResult = await testDb
@@ -496,7 +502,9 @@ describe("Stream Creation Integration Tests", () => {
 
       const auditResult = await testDb
         .getPool()
-        .query("SELECT * FROM stream_audit_log WHERE stream_id = $1", [streamId]);
+        .query("SELECT * FROM stream_audit_log WHERE stream_id = $1", [
+          streamId,
+        ]);
       expect(auditResult.rows).toHaveLength(0);
     });
 
@@ -551,7 +559,9 @@ describe("Stream Creation Integration Tests", () => {
 
       const auditResult = await testDb
         .getPool()
-        .query("SELECT * FROM stream_audit_log WHERE stream_id = $1", [streamId]);
+        .query("SELECT * FROM stream_audit_log WHERE stream_id = $1", [
+          streamId,
+        ]);
       expect(auditResult.rows).toHaveLength(0);
     });
   });

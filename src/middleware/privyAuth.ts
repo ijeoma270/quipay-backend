@@ -5,11 +5,15 @@ const PRIVY_APP_ID = process.env.PRIVY_APP_ID ?? "";
 
 // Privy's JWKS endpoint for verifying identity tokens
 const PRIVY_JWKS = createRemoteJWKSet(
-  new URL("https://auth.privy.io/api/v1/apps/" + PRIVY_APP_ID + "/.well-known/jwks.json")
+  new URL(
+    "https://auth.privy.io/api/v1/apps/" +
+      PRIVY_APP_ID +
+      "/.well-known/jwks.json",
+  ),
 );
 
 export interface PrivyClaims {
-  sub: string;           // Privy user DID: "did:privy:xxxx"
+  sub: string; // Privy user DID: "did:privy:xxxx"
   iss: string;
   aud: string;
   iat: number;
@@ -28,7 +32,7 @@ declare global {
 export async function requirePrivyAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -39,7 +43,7 @@ export async function requirePrivyAuth(
   const token = authHeader.slice(7);
   try {
     const { payload } = await jwtVerify(token, PRIVY_JWKS, {
-      issuer:   "privy.io",
+      issuer: "privy.io",
       audience: PRIVY_APP_ID,
     });
     req.privyUser = payload as unknown as PrivyClaims;
@@ -53,14 +57,14 @@ export async function requirePrivyAuth(
 export async function optionalPrivyAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return next();
   const token = authHeader.slice(7);
   try {
     const { payload } = await jwtVerify(token, PRIVY_JWKS, {
-      issuer:   "privy.io",
+      issuer: "privy.io",
       audience: PRIVY_APP_ID,
     });
     req.privyUser = payload as unknown as PrivyClaims;

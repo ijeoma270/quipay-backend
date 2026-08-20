@@ -149,12 +149,14 @@ describe("Pool metric instrumentation", () => {
     jest.mock("pg", () => {
       const mClient = { release: jest.fn() };
       const mPool = {
-        connect: jest.fn().mockResolvedValue(mClient),
+        connect: jest.fn((() => Promise.resolve(mClient)) as any),
+        query: jest.fn((() =>
+          Promise.resolve({ rows: [], rowCount: 0 })) as any),
         totalCount: 5,
         idleCount: 2,
         waitingCount: 1,
         on: jest.fn(),
-        end: jest.fn().mockResolvedValue(undefined),
+        end: jest.fn((() => Promise.resolve(undefined)) as any),
       };
       return { Pool: jest.fn(() => mPool) };
     });

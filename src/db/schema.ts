@@ -450,6 +450,58 @@ export const streamAuditLog = pgTable(
   ],
 );
 
+// Cross-chain transfer tracking (Circle CCTP v2)
+export const crossChainTransfers = pgTable(
+  "cross_chain_transfers",
+  {
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    employerAddress: text("employer_address"),
+    workerAddress: text("worker_address"),
+    direction: text("direction").notNull(), // 'deposit' | 'withdrawal'
+    sourceChain: text("source_chain").notNull(),
+    destinationChain: text("destination_chain").notNull(),
+    amount: numeric("amount").notNull(),
+    sourceTxHash: text("source_tx_hash").notNull(),
+    destinationTxHash: text("destination_tx_hash"),
+    messageHash: text("message_hash"),
+    attestation: text("attestation"),
+    cctpMessage: text("cctp_message"),
+    status: text("status").notNull().default("pending"), // 'pending' | 'attested' | 'completed' | 'failed'
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_cct_status")
+      .on(table.status)
+      .where(sql`${table.status} IN ('pending', 'attested')`),
+    index("idx_cct_employer").on(table.employerAddress),
+    index("idx_cct_worker").on(table.workerAddress),
+    uniqueIndex("idx_cct_source_tx_hash").on(table.sourceTxHash),
+    index("idx_cct_created_at").on(table.createdAt.desc()),
+    index("idx_cct_employer_created").on(
+      table.employerAddress,
+      table.createdAt.desc(),
+    ),
+    check(
+      "cct_direction_check",
+      sql`${table.direction} IN ('deposit', 'withdrawal')`,
+    ),
+    check(
+      "cct_status_check",
+      sql`${table.status} IN ('pending', 'attested', 'completed', 'failed')`,
+    ),
+    check("cct_amount_positive", sql`${table.amount} > 0`),
+  ],
+);
+
 // Payroll report schedules for automated email reports
 export const payrollReportSchedules = pgTable(
   "payroll_report_schedules",

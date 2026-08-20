@@ -1401,7 +1401,10 @@ const swaggerDefinition = {
  * Validates the generated spec for basic OpenAPI compliance.
  */
 export const validateSpec = () => {
-  if (!swaggerDefinition.paths || Object.keys(swaggerDefinition.paths).length === 0) {
+  if (
+    !swaggerDefinition.paths ||
+    Object.keys(swaggerDefinition.paths).length === 0
+  ) {
     throw new Error("OpenAPI spec is empty or has no paths defined.");
   }
 };

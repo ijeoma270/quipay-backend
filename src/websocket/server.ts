@@ -20,6 +20,12 @@ export type StreamEventType =
   | "stream_cancelled"
   | "stream_completed";
 
+export type CrossChainEventType =
+  | "cross_chain.detected"
+  | "cross_chain.attested"
+  | "cross_chain.completed"
+  | "cross_chain.failed";
+
 export interface StreamEvent {
   type: StreamEventType;
   streamId: string;
@@ -145,6 +151,46 @@ export const emitStreamEvent = (
   io.to("admin").emit("stream:event", event);
 
   console.log(`[WebSocket] Emitted event ${eventType} for stream ${streamId}`);
+};
+
+/**
+ * Emit a cross-chain transfer event to relevant rooms
+ */
+export const emitCrossChainEvent = (
+  eventType: CrossChainEventType,
+  transferId: string,
+  data: any,
+): void => {
+  if (!io) {
+    console.warn(
+      "[WebSocket] Server not initialized, cannot emit cross-chain event",
+    );
+    return;
+  }
+
+  const event = {
+    type: eventType,
+    transferId,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Emit to employer room if available
+  if (data.employerAddress) {
+    io.to(`employer:${data.employerAddress}`).emit("cross_chain:event", event);
+  }
+
+  // Emit to worker room if available
+  if (data.workerAddress) {
+    io.to(`worker:${data.workerAddress}`).emit("cross_chain:event", event);
+  }
+
+  // Also emit to all admins
+  io.to("admin").emit("cross_chain:event", event);
+
+  console.log(
+    `[WebSocket] Emitted cross-chain event ${eventType} for transfer ${transferId}`,
+  );
 };
 
 /**

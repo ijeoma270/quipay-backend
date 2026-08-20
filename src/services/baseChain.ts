@@ -7,9 +7,7 @@ export const baseClient = createPublicClient({
   chain: IS_MAINNET ? base : baseSepolia,
   transport: http(
     process.env.BASE_RPC_URL ??
-      (IS_MAINNET
-        ? "https://mainnet.base.org"
-        : "https://sepolia.base.org")
+      (IS_MAINNET ? "https://mainnet.base.org" : "https://sepolia.base.org"),
   ),
 });
 
@@ -58,14 +56,34 @@ export async function getWorkerStreamsBase(workerAddress: Address) {
 export async function getStreamBase(streamId: Address) {
   if (!VAULT_ADDRESS) return null;
   try {
-    const data = await baseClient.readContract({
+    const data = (await baseClient.readContract({
       address: VAULT_ADDRESS,
       abi: PAYROLL_VAULT_ABI,
       functionName: "getStream",
       args: [streamId],
-    }) as [Address, Address, Address, bigint, bigint, bigint, bigint, bigint, boolean];
+    })) as [
+      Address,
+      Address,
+      Address,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      boolean,
+    ];
 
-    const [employer, worker, token, rate, startTs, endTs, cliffTs, withdrawn, cancelled] = data;
+    const [
+      employer,
+      worker,
+      token,
+      rate,
+      startTs,
+      endTs,
+      cliffTs,
+      withdrawn,
+      cancelled,
+    ] = data;
     const now = BigInt(Math.floor(Date.now() / 1000));
     const elapsed = now > startTs ? now - startTs : 0n;
     const vested = elapsed * rate;
@@ -77,7 +95,7 @@ export async function getStreamBase(streamId: Address) {
       employer,
       worker,
       token,
-      ratePerSecond: Number(rate) / 1e6,        // USDC has 6 decimals
+      ratePerSecond: Number(rate) / 1e6, // USDC has 6 decimals
       startTs: Number(startTs),
       endTs: Number(endTs),
       cliffTs: Number(cliffTs),
@@ -94,12 +112,12 @@ export async function getStreamBase(streamId: Address) {
 export async function getEmployerBalanceBase(employerAddress: Address) {
   if (!VAULT_ADDRESS) return 0;
   try {
-    const balance = await baseClient.readContract({
+    const balance = (await baseClient.readContract({
       address: VAULT_ADDRESS,
       abi: PAYROLL_VAULT_ABI,
       functionName: "getBalance",
       args: [employerAddress, USDC_ADDRESS],
-    }) as bigint;
+    })) as bigint;
     return Number(balance) / 1e6;
   } catch {
     return 0;

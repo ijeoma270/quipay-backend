@@ -26,10 +26,7 @@ const server = new rpc.Server(SOROBAN_RPC_URL);
 // ─── Event parser ─────────────────────────────────────────────────────────────
 
 type EventKind =
-  | "stream_created"
-  | "withdrawal"
-  | "stream_cancelled"
-  | "stream_completed";
+  "stream_created" | "withdrawal" | "stream_cancelled" | "stream_completed";
 
 const parseEvent = (
   event: rpc.Api.EventResponse,

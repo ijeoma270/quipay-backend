@@ -11,6 +11,16 @@ import crypto from "crypto";
 
 jest.mock("../services/secretsBootstrap");
 jest.mock("discord-interactions");
+jest.mock("sanitize-html", () => {
+  const sanitize = (input: string, _options?: any): string => {
+    if (typeof input !== "string") return input;
+    // Remove script tags and their content, then strip remaining tags
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<[^>]*>/g, "");
+  };
+  return sanitize;
+});
 
 describe("Security Middleware", () => {
   let mockReq: Partial<SecureRequest>;

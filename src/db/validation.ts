@@ -32,7 +32,7 @@ export const overallStatsSchema = z.object({
 /**
  * Validates a database row against a Zod schema.
  * Throws a DatabaseValidationError if validation fails.
- * 
+ *
  * @param queryName - Name of the query for error reporting
  * @param row - The row data to validate
  * @param schema - Zod schema to validate against
@@ -49,7 +49,9 @@ export function validateRow<T>(
   } catch (error) {
     const errorMessage =
       error instanceof z.ZodError
-        ? (error as z.ZodError).issues.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ")
+        ? (error as z.ZodError).issues
+            .map((e) => `${e.path.join(".")}: ${e.message}`)
+            .join("; ")
         : error instanceof Error
           ? error.message
           : String(error);
@@ -65,7 +67,7 @@ export function validateRow<T>(
 /**
  * Validates multiple database rows against a Zod schema.
  * Throws a DatabaseValidationError if any row fails validation.
- * 
+ *
  * @param queryName - Name of the query for error reporting
  * @param rows - Array of row data to validate
  * @param schema - Zod schema to validate each row against
@@ -106,7 +108,7 @@ export function validateRows<T>(
         ...issue,
         path: [`row[0]`, ...issue.path],
       }));
-      
+
       const errorMessage = issuesWithIndex
         .map((e) => `${e.path.join(".")}: ${e.message}`)
         .join("; ");
@@ -118,8 +120,7 @@ export function validateRows<T>(
       );
     }
 
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
 
     throw new DatabaseValidationError(
       `Schema validation failed for ${queryName}: ${errorMessage}`,

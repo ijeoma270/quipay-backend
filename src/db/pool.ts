@@ -210,20 +210,28 @@ const createConfiguredPool = (
   const originalConnect = activePool.connect.bind(activePool);
   activePool.connect = (...args: any[]): any => {
     const endTimer = pgPoolCheckoutDuration.startTimer();
-    if (args.length > 0 && typeof args[0] === 'function') {
+    if (args.length > 0 && typeof args[0] === "function") {
       const cb = args[0];
-      return originalConnect((err: Error, client: PoolClient, done: any) => {
-        endTimer();
-        cb(err, client, done);
-      });
+      return originalConnect(
+        (
+          err: Error | undefined,
+          client: PoolClient | undefined,
+          done: (release?: any) => void,
+        ) => {
+          endTimer();
+          cb(err, client, done);
+        },
+      );
     }
-    return originalConnect().then((client: PoolClient) => {
-      endTimer();
-      return client;
-    }).catch((err: Error) => {
-      endTimer();
-      throw err;
-    });
+    return originalConnect()
+      .then((client: PoolClient) => {
+        endTimer();
+        return client;
+      })
+      .catch((err: Error) => {
+        endTimer();
+        throw err;
+      });
   };
 
   return activePool;

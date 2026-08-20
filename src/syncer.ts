@@ -30,9 +30,7 @@ let inFlightSyncCycle: Promise<number> | null = null;
 // ─── Event parsers ────────────────────────────────────────────────────────────
 
 type StreamEventKind =
-  | "stream_created"
-  | "stream_cancelled"
-  | "funds_withdrawn";
+  "stream_created" | "stream_cancelled" | "funds_withdrawn";
 
 interface SyncedStreamEvent {
   kind: StreamEventKind;
