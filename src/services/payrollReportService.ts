@@ -62,6 +62,56 @@ export const sendPayrollReportEmail = async (
 };
 
 /**
+ * Send email with optional PDF attachment using SendGrid
+ */
+export const sendReportEmailWithAttachment = async (
+  to: string,
+  subject: string,
+  html: string,
+  pdfBuffer: Buffer | null,
+): Promise<boolean> => {
+  if (!SENDGRID_API_KEY) {
+    console.warn("[Email] SendGrid API key not configured, skipping email");
+    return false;
+  }
+
+  const attachments = pdfBuffer
+    ? [
+        {
+          content: pdfBuffer.toString("base64"),
+          filename: `payroll-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+          type: "application/pdf",
+          disposition: "attachment",
+        },
+      ]
+    : undefined;
+
+  try {
+    await axios.post(
+      "https://api.sendgrid.com/v3/mail/send",
+      {
+        personalizations: [{ to: [{ email: to }], subject }],
+        from: { email: SENDGRID_FROM_EMAIL, name: "Quipay Payroll" },
+        content: [{ type: "text/html", value: html }],
+        attachments,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${SENDGRID_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    console.log(`[Email] Report email sent to ${to}`);
+    return true;
+  } catch (error: any) {
+    console.error(`[Email] Failed to send report email:`, error.message);
+    throw error;
+  }
+};
+
+/**
  * Generate HTML report for email
  */
 const generateReportHTML = (report: PayrollReportData): string => {
