@@ -68,7 +68,10 @@ export const generateReportData = async (
       streamCount: sql<string>`COUNT(DISTINCT ${withdrawals.streamId})`,
     })
     .from(withdrawals)
-    .innerJoin(payrollStreams, eq(withdrawals.streamId, payrollStreams.streamId))
+    .innerJoin(
+      payrollStreams,
+      eq(withdrawals.streamId, payrollStreams.streamId),
+    )
     .where(
       and(
         eq(payrollStreams.employerAddress, employerId),
@@ -84,7 +87,10 @@ export const generateReportData = async (
       total: sql<string>`COALESCE(SUM(${withdrawals.amount}), 0)`,
     })
     .from(withdrawals)
-    .innerJoin(payrollStreams, eq(withdrawals.streamId, payrollStreams.streamId))
+    .innerJoin(
+      payrollStreams,
+      eq(withdrawals.streamId, payrollStreams.streamId),
+    )
     .where(
       and(
         eq(payrollStreams.employerAddress, employerId),
@@ -135,8 +141,8 @@ export const generateReportData = async (
       ),
     );
 
-  const deposits = parseFloat(vaultDeposits?.total ?? "0");
-  const payouts = parseFloat(vaultPayouts?.total ?? "0");
+  const deposits = BigInt(vaultDeposits?.total ?? "0");
+  const payouts = BigInt(vaultPayouts?.total ?? "0");
 
   return {
     employerId,
@@ -177,7 +183,11 @@ function emptyReport(
     activeStreams: 0,
     completedStreams: 0,
     workers: [],
-    vaultActivity: { totalDeposits: "0", totalDisbursed: "0", currentBalance: "0" },
+    vaultActivity: {
+      totalDeposits: "0",
+      totalDisbursed: "0",
+      currentBalance: "0",
+    },
     streamEvents: [],
   };
 }

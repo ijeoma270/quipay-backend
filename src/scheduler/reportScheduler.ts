@@ -19,21 +19,30 @@ const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
 /**
- * Calculate next send date based on frequency
+ * Calculate next send date based on frequency and optional day preferences.
+ * - weekly: next occurrence of dayOfWeek (1=Mon..7=Sun), defaults to next Monday
+ * - monthly: next occurrence of dayOfMonth (1-28), defaults to 1st of next month
  */
-const calculateNextSendDate = (frequency: "weekly" | "monthly"): Date => {
+const calculateNextSendDate = (
+  frequency: "weekly" | "monthly",
+  dayOfMonth?: number | null,
+  dayOfWeek?: number | null,
+): Date => {
   const now = new Date();
 
   if (frequency === "weekly") {
-    const nextMonday = new Date(now);
-    nextMonday.setDate(now.getDate() + ((1 - now.getDay() + 7) % 7 || 7));
-    nextMonday.setHours(9, 0, 0, 0);
-    return nextMonday;
+    const targetDay = dayOfWeek ?? 1; // default: Monday
+    const next = new Date(now);
+    const diff = (targetDay - now.getDay() + 7) % 7 || 7;
+    next.setDate(now.getDate() + diff);
+    next.setHours(9, 0, 0, 0);
+    return next;
   } else {
+    const targetDay = dayOfMonth ?? 1;
     const nextMonth = new Date(
       now.getFullYear(),
       now.getMonth() + 1,
-      1,
+      Math.min(targetDay, 28),
       9,
       0,
       0,
@@ -176,13 +185,20 @@ export const processScheduledReports = async (): Promise<void> => {
           schedule.employerId,
           schedule.email,
           schedule.frequency,
-          schedule.includeSections ?? ["summary", "streams", "withdrawals", "vault_balance"],
+          schedule.includeSections ?? [
+            "summary",
+            "streams",
+            "withdrawals",
+            "vault_balance",
+          ],
           schedule.format ?? "pdf",
         );
 
         if (sent) {
           const nextSendAt = calculateNextSendDate(
             schedule.frequency as "weekly" | "monthly",
+            schedule.dayOfMonth,
+            schedule.dayOfWeek,
           );
           await updateReportScheduleLastSent(schedule.id, nextSendAt);
 
