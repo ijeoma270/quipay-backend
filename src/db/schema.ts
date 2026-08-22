@@ -509,7 +509,19 @@ export const payrollReportSchedules = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     employerId: text("employer_id").notNull(),
     frequency: text("frequency").notNull(), // 'weekly' | 'monthly'
+    dayOfMonth: integer("day_of_month"), // 1-31 for monthly
+    dayOfWeek: integer("day_of_week"), // 0-6 for weekly (0=Sunday)
     email: text("email").notNull(),
+    includeSections: text("include_sections")
+      .array()
+      .notNull()
+      .default([
+        "summary",
+        "streams",
+        "withdrawals",
+        "vault_balance",
+      ]),
+    format: text("format").notNull().default("pdf"), // 'pdf' | 'csv' | 'both'
     enabled: boolean("enabled").notNull().default(true),
     lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
     nextSendAt: timestamp("next_send_at", { withTimezone: true }),

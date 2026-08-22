@@ -1,17 +1,23 @@
 import { getDb } from "./pool";
 import { payrollReportSchedules } from "./schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, lte, isNull, or } from "drizzle-orm";
 import { DatabaseError } from "../errors/AppError";
 
 export interface PayrollReportScheduleInput {
   employerId: string;
   frequency: "weekly" | "monthly";
+  dayOfMonth?: number | null;
+  dayOfWeek?: number | null;
   email: string;
+  includeSections?: string[];
+  format?: "pdf" | "csv" | "both";
   enabled?: boolean;
 }
 
-export interface PayrollReportSchedule extends PayrollReportScheduleInput {
+export interface PayrollReportSchedule extends Omit<PayrollReportScheduleInput, 'format'> {
   id: number;
+  includeSections: string[];
+  format: string;
   lastSentAt?: Date | null;
   nextSendAt?: Date | null;
   createdAt: Date;
@@ -102,6 +108,31 @@ export const updateReportScheduleLastSent = async (
     .where(eq(payrollReportSchedules.id, id));
 };
 
+export const updateReportSchedule = async (
+  id: number,
+  employerId: string,
+  updates: Partial<PayrollReportScheduleInput>,
+): Promise<PayrollReportSchedule | null> => {
+  const db = getDb();
+  if (!db) return null;
+
+  const [updated] = await db
+    .update(payrollReportSchedules)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(payrollReportSchedules.id, id),
+        eq(payrollReportSchedules.employerId, employerId),
+      ),
+    )
+    .returning();
+
+  return (updated as PayrollReportSchedule) || null;
+};
+
 export const getEnabledSchedulesDue = async (): Promise<
   PayrollReportSchedule[]
 > => {
@@ -113,7 +144,15 @@ export const getEnabledSchedulesDue = async (): Promise<
   return db
     .select()
     .from(payrollReportSchedules)
-    .where(eq(payrollReportSchedules.enabled, true))
+    .where(
+      and(
+        eq(payrollReportSchedules.enabled, true),
+        or(
+          isNull(payrollReportSchedules.nextSendAt),
+          lte(payrollReportSchedules.nextSendAt, now),
+        ),
+      ),
+    )
     .orderBy(payrollReportSchedules.nextSendAt) as Promise<
     PayrollReportSchedule[]
   >;
