@@ -5,8 +5,8 @@ import {
 } from "../db/payrollReportSchedule";
 import {
   sendPayrollReportEmail,
-  PayrollReportData,
 } from "../services/payrollReportService";
+import { generateReportData } from "../services/reportDataService";
 import { serviceLogger } from "../audit/serviceLogger";
 
 /**
@@ -36,28 +36,6 @@ const calculateNextSendDate = (frequency: "weekly" | "monthly"): Date => {
 };
 
 /**
- * Generate mock report data (in production, this would query the database)
- */
-const generateReportData = async (
-  employerId: string,
-): Promise<PayrollReportData> => {
-  const now = new Date();
-  const periodStart = new Date(now);
-  periodStart.setDate(now.getDate() - 30);
-
-  // Mock data - replace with actual DB queries
-  return {
-    employerId,
-    periodStart,
-    periodEnd: now,
-    totalPaid: "0",
-    activeStreams: 0,
-    completedStreams: 0,
-    workers: [],
-  };
-};
-
-/**
  * Process scheduled payroll reports
  */
 export const processScheduledReports = async (): Promise<void> => {
@@ -66,7 +44,22 @@ export const processScheduledReports = async (): Promise<void> => {
 
     for (const schedule of schedules) {
       try {
-        const reportData = await generateReportData(schedule.employerId);
+        // Calculate reporting period based on frequency
+        const now = new Date();
+        const periodEnd = new Date(now);
+        const periodStart = new Date(now);
+
+        if (schedule.frequency === "weekly") {
+          periodStart.setDate(now.getDate() - 7);
+        } else {
+          periodStart.setMonth(now.getMonth() - 1);
+        }
+
+        const reportData = await generateReportData(
+          schedule.employerId,
+          periodStart,
+          periodEnd,
+        );
 
         const sent = await sendPayrollReportEmail(schedule.email, reportData);
 
