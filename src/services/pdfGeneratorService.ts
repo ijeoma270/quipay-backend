@@ -474,3 +474,357 @@ function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
   return date.toISOString().split("T")[0];
 }
+
+// ── Payroll Report PDF ──────────────────────────────────────────────────────
+
+export interface PayrollReportPdfData {
+  employerId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  totalPaid: string;
+  activeStreams: number;
+  completedStreams: number;
+  workers: Array<{
+    workerAddress: string;
+    totalReceived: string;
+    streamCount: number;
+  }>;
+  vaultActivity: {
+    totalDeposits: string;
+    totalDisbursed: string;
+    currentBalance: string;
+  };
+  streamEvents: Array<{
+    eventType: string;
+    streamId: number;
+    workerAddress: string;
+    timestamp: Date;
+  }>;
+}
+
+/**
+ * Generate a payroll report PDF summarizing an employer's payroll activity.
+ */
+export async function generatePayrollReport(
+  report: PayrollReportPdfData,
+  branding: BrandingSettings,
+): Promise<Buffer> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      // Fetch logo
+      let logoBuffer: Buffer | null = null;
+      if (branding.logoUrl) {
+        try {
+          if (
+            branding.logoUrl.startsWith("http://") ||
+            branding.logoUrl.startsWith("https://")
+          ) {
+            const response = await axios.get<ArrayBuffer>(branding.logoUrl, {
+              responseType: "arraybuffer",
+              timeout: 5000,
+            });
+            logoBuffer = Buffer.from(response.data);
+          } else {
+            logoBuffer = await fs.readFile(branding.logoUrl);
+          }
+        } catch {
+          // Logo fetch failed — continue without it
+        }
+      }
+
+      const primary = branding.primaryColor || DEFAULT_PRIMARY_COLOR;
+      const secondary = branding.secondaryColor || DEFAULT_SECONDARY_COLOR;
+
+      // ── Header ──
+      addReportHeader(doc, primary, secondary, logoBuffer, report);
+
+      // ── Summary Section ──
+      addReportSummary(doc, report, primary);
+
+      // ── Payouts Table ──
+      addPayoutsTable(doc, report.workers, primary);
+
+      // ── Vault Activity ──
+      addVaultActivity(doc, report.vaultActivity, primary);
+
+      // ── Stream Events ──
+      if (report.streamEvents.length > 0) {
+        addStreamEvents(doc, report.streamEvents, primary);
+      }
+
+      // ── Footer ──
+      addReportFooter(doc);
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function addReportHeader(
+  doc: PDFKit.PDFDocument,
+  primary: string,
+  secondary: string,
+  logoBuffer: Buffer | null,
+  report: PayrollReportPdfData,
+): void {
+  if (logoBuffer) {
+    try {
+      doc.image(logoBuffer, 50, 45, { width: 80 });
+    } catch {
+      doc.fontSize(14).fillColor(primary).text("Quipay", 50, 50);
+    }
+  } else {
+    doc.fontSize(14).fillColor(primary).text("Quipay", 50, 50);
+  }
+
+  doc
+    .fontSize(18)
+    .fillColor(primary)
+    .text("Payroll Report", 200, 50, { align: "right" });
+
+  doc
+    .fontSize(10)
+    .fillColor(secondary)
+    .text(
+      `${report.periodStart.toLocaleDateString()} — ${report.periodEnd.toLocaleDateString()}`,
+      200,
+      72,
+      { align: "right" },
+    );
+
+  doc
+    .moveTo(50, 95)
+    .lineTo(545, 95)
+    .strokeColor(primary)
+    .lineWidth(1.5)
+    .stroke()
+    .moveDown(2);
+}
+
+function addReportSummary(
+  doc: PDFKit.PDFDocument,
+  report: PayrollReportPdfData,
+  primary: string,
+): void {
+  doc
+    .fontSize(14)
+    .fillColor(primary)
+    .text("Summary")
+    .moveDown(0.5);
+
+  const startY = doc.y;
+  const leftX = 50;
+  const rightX = 300;
+  const lineH = 22;
+
+  const rows: [string, string][] = [
+    ["Total Paid", `${formatAmount(report.totalPaid)}`],
+    ["Active Streams", report.activeStreams.toString()],
+    ["Completed Streams", report.completedStreams.toString()],
+    ["Workers Paid", report.workers.length.toString()],
+  ];
+
+  rows.forEach(([label, value], i) => {
+    const y = startY + i * lineH;
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
+      .text(label, leftX, y)
+      .fillColor("#000000")
+      .text(value, leftX + 130, y);
+  });
+
+  doc.y = startY + rows.length * lineH + 15;
+}
+
+function addPayoutsTable(
+  doc: PDFKit.PDFDocument,
+  workers: PayrollReportPdfData["workers"],
+  primary: string,
+): void {
+  doc
+    .fontSize(14)
+    .fillColor(primary)
+    .text("Payouts by Worker")
+    .moveDown(0.5);
+
+  if (workers.length === 0) {
+    doc.fontSize(10).fillColor("#666666").text("No payouts in this period").moveDown(2);
+    return;
+  }
+
+  const tableTop = doc.y;
+  const leftMargin = 50;
+  const cols = { worker: 200, amount: 150, streams: 145 };
+
+  // Header row
+  doc
+    .fontSize(10)
+    .fillColor("#FFFFFF")
+    .rect(leftMargin, tableTop, 495, 20)
+    .fill(primary);
+
+  doc
+    .fillColor("#FFFFFF")
+    .text("Worker", leftMargin + 5, tableTop + 5, { width: cols.worker })
+    .text("Total Received", leftMargin + cols.worker + 5, tableTop + 5, {
+      width: cols.amount,
+    })
+    .text(
+      "Streams",
+      leftMargin + cols.worker + cols.amount + 5,
+      tableTop + 5,
+      { width: cols.streams },
+    );
+
+  let currentY = tableTop + 25;
+  workers.forEach((w, i) => {
+    const bg = i % 2 === 0 ? "#F9FAFB" : "#FFFFFF";
+    doc.rect(leftMargin, currentY, 495, 20).fill(bg);
+
+    const shortAddr = `${w.workerAddress.slice(0, 6)}…${w.workerAddress.slice(-4)}`;
+    doc
+      .fillColor("#000000")
+      .text(shortAddr, leftMargin + 5, currentY + 5, { width: cols.worker })
+      .text(formatAmount(w.totalReceived), leftMargin + cols.worker + 5, currentY + 5, {
+        width: cols.amount,
+      })
+      .text(
+        w.streamCount.toString(),
+        leftMargin + cols.worker + cols.amount + 5,
+        currentY + 5,
+        { width: cols.streams },
+      );
+
+    currentY += 20;
+  });
+
+  doc.y = currentY + 15;
+}
+
+function addVaultActivity(
+  doc: PDFKit.PDFDocument,
+  vault: PayrollReportPdfData["vaultActivity"],
+  primary: string,
+): void {
+  doc
+    .fontSize(14)
+    .fillColor(primary)
+    .text("Vault Activity")
+    .moveDown(0.5);
+
+  const startY = doc.y;
+  const leftX = 50;
+  const lineH = 22;
+
+  const rows: [string, string][] = [
+    ["Deposits Received", formatAmount(vault.totalDeposits)],
+    ["Total Disbursed", formatAmount(vault.totalDisbursed)],
+    ["Current Balance", formatAmount(vault.currentBalance)],
+  ];
+
+  rows.forEach(([label, value], i) => {
+    const y = startY + i * lineH;
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
+      .text(label, leftX, y)
+      .fillColor("#000000")
+      .text(value, leftX + 150, y);
+  });
+
+  doc.y = startY + rows.length * lineH + 15;
+}
+
+function addStreamEvents(
+  doc: PDFKit.PDFDocument,
+  events: PayrollReportPdfData["streamEvents"],
+  primary: string,
+): void {
+  doc
+    .fontSize(14)
+    .fillColor(primary)
+    .text("Stream Events")
+    .moveDown(0.5);
+
+  const tableTop = doc.y;
+  const leftMargin = 50;
+  const cols = { date: 120, event: 120, stream: 100, worker: 155 };
+
+  doc
+    .fontSize(10)
+    .fillColor("#FFFFFF")
+    .rect(leftMargin, tableTop, 495, 20)
+    .fill(primary);
+
+  doc
+    .fillColor("#FFFFFF")
+    .text("Date", leftMargin + 5, tableTop + 5, { width: cols.date })
+    .text("Event", leftMargin + cols.date + 5, tableTop + 5, { width: cols.event })
+    .text(
+      "Stream ID",
+      leftMargin + cols.date + cols.event + 5,
+      tableTop + 5,
+      { width: cols.stream },
+    )
+    .text(
+      "Worker",
+      leftMargin + cols.date + cols.event + cols.stream + 5,
+      tableTop + 5,
+      { width: cols.worker },
+    );
+
+  let currentY = tableTop + 25;
+  events.forEach((e, i) => {
+    const bg = i % 2 === 0 ? "#F9FAFB" : "#FFFFFF";
+    doc.rect(leftMargin, currentY, 495, 20).fill(bg);
+
+    const shortAddr = `${e.workerAddress.slice(0, 6)}…${e.workerAddress.slice(-4)}`;
+    doc
+      .fillColor("#000000")
+      .text(e.timestamp.toLocaleDateString(), leftMargin + 5, currentY + 5, {
+        width: cols.date,
+      })
+      .text(e.eventType, leftMargin + cols.date + 5, currentY + 5, {
+        width: cols.event,
+      })
+      .text(
+        e.streamId.toString(),
+        leftMargin + cols.date + cols.event + 5,
+        currentY + 5,
+        { width: cols.stream },
+      )
+      .text(
+        shortAddr,
+        leftMargin + cols.date + cols.event + cols.stream + 5,
+        currentY + 5,
+        { width: cols.worker },
+      );
+
+    currentY += 20;
+  });
+
+  doc.y = currentY + 15;
+}
+
+function addReportFooter(doc: PDFKit.PDFDocument): void {
+  const pageHeight = doc.page.height;
+  doc
+    .fontSize(8)
+    .fillColor("#666666")
+    .text(
+      "Generated by Quipay Payroll System — This is a computer-generated document.",
+      50,
+      pageHeight - 50,
+      { align: "center", width: 495 },
+    );
+}
