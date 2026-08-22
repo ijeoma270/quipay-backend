@@ -615,11 +615,7 @@ function addReportSummary(
   report: PayrollReportPdfData,
   primary: string,
 ): void {
-  doc
-    .fontSize(14)
-    .fillColor(primary)
-    .text("Summary")
-    .moveDown(0.5);
+  doc.fontSize(14).fillColor(primary).text("Summary").moveDown(0.5);
 
   const startY = doc.y;
   const leftX = 50;
@@ -651,14 +647,14 @@ function addPayoutsTable(
   workers: PayrollReportPdfData["workers"],
   primary: string,
 ): void {
-  doc
-    .fontSize(14)
-    .fillColor(primary)
-    .text("Payouts by Worker")
-    .moveDown(0.5);
+  doc.fontSize(14).fillColor(primary).text("Payouts by Worker").moveDown(0.5);
 
   if (workers.length === 0) {
-    doc.fontSize(10).fillColor("#666666").text("No payouts in this period").moveDown(2);
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
+      .text("No payouts in this period")
+      .moveDown(2);
     return;
   }
 
@@ -679,12 +675,9 @@ function addPayoutsTable(
     .text("Total Received", leftMargin + cols.worker + 5, tableTop + 5, {
       width: cols.amount,
     })
-    .text(
-      "Streams",
-      leftMargin + cols.worker + cols.amount + 5,
-      tableTop + 5,
-      { width: cols.streams },
-    );
+    .text("Streams", leftMargin + cols.worker + cols.amount + 5, tableTop + 5, {
+      width: cols.streams,
+    });
 
   let currentY = tableTop + 25;
   workers.forEach((w, i) => {
@@ -695,9 +688,14 @@ function addPayoutsTable(
     doc
       .fillColor("#000000")
       .text(shortAddr, leftMargin + 5, currentY + 5, { width: cols.worker })
-      .text(formatAmount(w.totalReceived), leftMargin + cols.worker + 5, currentY + 5, {
-        width: cols.amount,
-      })
+      .text(
+        formatAmount(w.totalReceived),
+        leftMargin + cols.worker + 5,
+        currentY + 5,
+        {
+          width: cols.amount,
+        },
+      )
       .text(
         w.streamCount.toString(),
         leftMargin + cols.worker + cols.amount + 5,
@@ -716,11 +714,7 @@ function addVaultActivity(
   vault: PayrollReportPdfData["vaultActivity"],
   primary: string,
 ): void {
-  doc
-    .fontSize(14)
-    .fillColor(primary)
-    .text("Vault Activity")
-    .moveDown(0.5);
+  doc.fontSize(14).fillColor(primary).text("Vault Activity").moveDown(0.5);
 
   const startY = doc.y;
   const leftX = 50;
@@ -750,11 +744,7 @@ function addStreamEvents(
   events: PayrollReportPdfData["streamEvents"],
   primary: string,
 ): void {
-  doc
-    .fontSize(14)
-    .fillColor(primary)
-    .text("Stream Events")
-    .moveDown(0.5);
+  doc.fontSize(14).fillColor(primary).text("Stream Events").moveDown(0.5);
 
   const tableTop = doc.y;
   const leftMargin = 50;
@@ -769,13 +759,12 @@ function addStreamEvents(
   doc
     .fillColor("#FFFFFF")
     .text("Date", leftMargin + 5, tableTop + 5, { width: cols.date })
-    .text("Event", leftMargin + cols.date + 5, tableTop + 5, { width: cols.event })
-    .text(
-      "Stream ID",
-      leftMargin + cols.date + cols.event + 5,
-      tableTop + 5,
-      { width: cols.stream },
-    )
+    .text("Event", leftMargin + cols.date + 5, tableTop + 5, {
+      width: cols.event,
+    })
+    .text("Stream ID", leftMargin + cols.date + cols.event + 5, tableTop + 5, {
+      width: cols.stream,
+    })
     .text(
       "Worker",
       leftMargin + cols.date + cols.event + cols.stream + 5,

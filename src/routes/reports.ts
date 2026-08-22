@@ -217,12 +217,19 @@ reportsRouter.post(
         schedule.employerId,
         schedule.email,
         schedule.frequency,
-        schedule.includeSections ?? ["summary", "streams", "withdrawals", "vault_balance"],
+        schedule.includeSections ?? [
+          "summary",
+          "streams",
+          "withdrawals",
+          "vault_balance",
+        ],
         schedule.format ?? "pdf",
       );
 
       res.json({
-        message: result.sent ? "Test report sent successfully" : "Report generated but email delivery failed",
+        message: result.sent
+          ? "Test report sent successfully"
+          : "Report generated but email delivery failed",
         sent: result.sent,
         ipfsUrl: result.ipfsUrl,
       });

@@ -14,7 +14,10 @@ export interface PayrollReportScheduleInput {
   enabled?: boolean;
 }
 
-export interface PayrollReportSchedule extends Omit<PayrollReportScheduleInput, 'format'> {
+export interface PayrollReportSchedule extends Omit<
+  PayrollReportScheduleInput,
+  "format"
+> {
   id: number;
   includeSections: string[];
   format: string;

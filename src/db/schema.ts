@@ -515,12 +515,7 @@ export const payrollReportSchedules = pgTable(
     includeSections: text("include_sections")
       .array()
       .notNull()
-      .default([
-        "summary",
-        "streams",
-        "withdrawals",
-        "vault_balance",
-      ]),
+      .default(["summary", "streams", "withdrawals", "vault_balance"]),
     format: text("format").notNull().default("pdf"), // 'pdf' | 'csv' | 'both'
     enabled: boolean("enabled").notNull().default(true),
     lastSentAt: timestamp("last_sent_at", { withTimezone: true }),

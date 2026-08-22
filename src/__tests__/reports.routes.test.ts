@@ -38,21 +38,32 @@ describe("POST /reports/schedule", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    (reportScheduleDb.createReportSchedule as jest.Mock).mockResolvedValue(mockSchedule);
+    (reportScheduleDb.createReportSchedule as jest.Mock).mockResolvedValue(
+      mockSchedule,
+    );
 
     const res = await request(app)
       .post("/reports/schedule")
-      .send({ frequency: "monthly", email: "test@example.com", includeSections: ["summary", "streams"] });
+      .send({
+        frequency: "monthly",
+        email: "test@example.com",
+        includeSections: ["summary", "streams"],
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.schedule.id).toBe(1);
     expect(reportScheduleDb.createReportSchedule).toHaveBeenCalledWith(
-      expect.objectContaining({ frequency: "monthly", email: "test@example.com" }),
+      expect.objectContaining({
+        frequency: "monthly",
+        email: "test@example.com",
+      }),
     );
   });
 
   it("returns 400 for missing fields", async () => {
-    const res = await request(app).post("/reports/schedule").send({ frequency: "monthly" });
+    const res = await request(app)
+      .post("/reports/schedule")
+      .send({ frequency: "monthly" });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Missing required fields");
   });
@@ -80,7 +91,9 @@ describe("GET /reports/schedule", () => {
       { id: 1, employerId: "owner-1", frequency: "weekly", email: "a@b.com" },
       { id: 2, employerId: "owner-1", frequency: "monthly", email: "c@d.com" },
     ];
-    (reportScheduleDb.getReportSchedulesByEmployer as jest.Mock).mockResolvedValue(mockSchedules);
+    (
+      reportScheduleDb.getReportSchedulesByEmployer as jest.Mock
+    ).mockResolvedValue(mockSchedules);
 
     const res = await request(app).get("/reports/schedule");
 
@@ -102,7 +115,9 @@ describe("DELETE /reports/schedule/:id", () => {
       employerId: "owner-1",
     });
 
-    const res = await request(app).delete("/reports/schedule/7").set("x-user-id", "owner-1");
+    const res = await request(app)
+      .delete("/reports/schedule/7")
+      .set("x-user-id", "owner-1");
 
     expect(res.status).toBe(200);
     expect(res.body.message).toContain("deleted");
@@ -116,14 +131,18 @@ describe("DELETE /reports/schedule/:id", () => {
       email: "owner@example.com",
     });
 
-    const res = await request(app).delete("/reports/schedule/7").set("x-user-id", "not-owner");
+    const res = await request(app)
+      .delete("/reports/schedule/7")
+      .set("x-user-id", "not-owner");
 
     expect(res.status).toBe(403);
     expect(reportScheduleDb.deleteReportSchedule).not.toHaveBeenCalled();
   });
 
   it("returns 404 when schedule does not exist", async () => {
-    (reportScheduleDb.getReportScheduleById as jest.Mock).mockResolvedValue(null);
+    (reportScheduleDb.getReportScheduleById as jest.Mock).mockResolvedValue(
+      null,
+    );
 
     const res = await request(app).delete("/reports/schedule/999");
 
